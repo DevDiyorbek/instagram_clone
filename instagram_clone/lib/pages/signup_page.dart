@@ -1,13 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:ngdemo17/model/member_model.dart';
-import 'package:ngdemo17/pages/signin_page.dart';
-import 'package:ngdemo17/services/db_service.dart';
-
-import '../services/auth_service.dart';
-import '../services/prefs_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:ngdemo17/bloc/sign_up/sign_up_bloc.dart';
+import 'package:ngdemo17/bloc/sign_up/sign_up_event.dart';
+import 'package:ngdemo17/bloc/sign_up/sign_up_state.dart';
 import '../services/utils_service.dart';
-import 'home_page.dart';
 
 class SignUpPage extends StatefulWidget {
   static const String id = "signup_page";
@@ -19,14 +15,19 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
+  late SignUpBloc signUpBloc;
 
-  var isLoading = false;
   var fullnameController = TextEditingController();
   var emailController = TextEditingController();
   var passwordController = TextEditingController();
   var cpasswordController = TextEditingController();
 
-  _doSignUp() async{
+  void initState() {
+    super.initState();
+    signUpBloc = context.read<SignUpBloc>();
+  }
+
+  _doSignUp() async {
     String fullname = fullnameController.text.toString().trim();
     String email = emailController.text.toString().trim();
     String password = passwordController.text.toString().trim();
@@ -39,48 +40,33 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
-
-    AuthService.signUpUser(context, fullname, email, password).then((firebaseUser) => {
-      _getFirebaseUser(firebaseUser, Member(fullname, email)),
-    });
-  }
-
-  _getFirebaseUser(User? firebaseUser, Member member) async {
-    setState(() {
-      isLoading = false;
-    });
-    if (firebaseUser != null) {
-      _saveMemberIdToLocal(firebaseUser);
-      _saveMemberToCloud(member);
-
-      _callHomePage();
-    } else {
-      Utils.fireToast("Check your information");
-    }
-  }
-
-  _saveMemberIdToLocal(User firebaseUser)async{
-    await Prefs.saveUserId(firebaseUser.uid);
-  }
-  _saveMemberToCloud(Member member) async{
-    await DBService.storeMember(member);
-  }
-
-  _callHomePage(){
-    Navigator.pushReplacementNamed(context, HomePage.id);
-  }
-
-  _callSignInPage() {
-    Navigator.pushReplacementNamed(context, SignInPage.id);
+    signUpBloc.add(SignedUpEvent(
+        context: context,
+        fullName: fullname,
+        email: email,
+        password: password));
   }
 
   @override
   Widget build(BuildContext context) {
+    return BlocConsumer<SignUpBloc, SignUpState>(builder: (context, state) {
+      if (state is SignUpLoadingState) {
+        return viewOfSignUp(true);
+      }
+      return viewOfSignUp(true);
+    }, listener: (context, state) {
+      if (state is SignUpSuccessState) {
+        signUpBloc.callHomePage(context);
+      }
+      if (state is SignUpFailureState) {
+        Utils.fireToast(state.errorMessage);
+      }
+    });
+  }
+
+  Widget viewOfSignUp(bool isLoading) {
     return GestureDetector(
-      onTap: (){
+      onTap: () {
         FocusManager.instance.primaryFocus?.unfocus();
       },
       child: Scaffold(
@@ -92,15 +78,14 @@ class _SignUpPageState extends State<SignUpPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color.fromRGBO(193, 53, 132, 1),
-                    Color.fromRGBO(131, 58, 180, 1),
-                  ])),
+                Color.fromRGBO(193, 53, 132, 1),
+                Color.fromRGBO(131, 58, 180, 1),
+              ])),
           child: Stack(
             children: [
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-
                   Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -117,7 +102,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         Container(
                           margin: const EdgeInsets.only(top: 10),
                           height: 50,
-                          padding: EdgeInsets.only(left: 10, right: 10),
+                          padding: const EdgeInsets.only(left: 10, right: 10),
                           decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(7)),
@@ -146,8 +131,8 @@ class _SignUpPageState extends State<SignUpPage> {
                             decoration: const InputDecoration(
                                 hintText: "Email",
                                 border: InputBorder.none,
-                                hintStyle:
-                                TextStyle(fontSize: 17, color: Colors.white54)),
+                                hintStyle: TextStyle(
+                                    fontSize: 17, color: Colors.white54)),
                           ),
                         ),
 
@@ -166,16 +151,16 @@ class _SignUpPageState extends State<SignUpPage> {
                             decoration: const InputDecoration(
                                 hintText: "Password",
                                 border: InputBorder.none,
-                                hintStyle:
-                                TextStyle(fontSize: 17, color: Colors.white54)),
+                                hintStyle: TextStyle(
+                                    fontSize: 17, color: Colors.white54)),
                           ),
                         ),
 
                         //#cpassword
                         Container(
-                          margin: EdgeInsets.only(top: 10),
+                          margin: const EdgeInsets.only(top: 10),
                           height: 50,
-                          padding: EdgeInsets.only(left: 10, right: 10),
+                          padding: const EdgeInsets.only(left: 10, right: 10),
                           decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(7)),
@@ -197,24 +182,24 @@ class _SignUpPageState extends State<SignUpPage> {
                             _doSignUp();
                           },
                           child: Container(
-                              margin: EdgeInsets.only(top: 10),
+                              margin: const EdgeInsets.only(top: 10),
                               height: 50,
-                              padding: EdgeInsets.only(left: 10, right: 10),
+                              padding:
+                                  const EdgeInsets.only(left: 10, right: 10),
                               decoration: BoxDecoration(
                                   color: Colors.white.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(7)),
                               child: const Center(
                                 child: Text(
                                   "Sign Up",
-                                  style:
-                                  TextStyle(color: Colors.white, fontSize: 17),
+                                  style: TextStyle(
+                                      color: Colors.white, fontSize: 17),
                                 ),
                               )),
                         ),
                       ],
                     ),
                   ),
-
 
                   //#footer
                   Row(
@@ -229,7 +214,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                       GestureDetector(
                           onTap: () {
-                            _callSignInPage();
+                            signUpBloc.callSignInPage(context);
                           },
                           child: const Text(
                             "Sign In",
@@ -240,16 +225,13 @@ class _SignUpPageState extends State<SignUpPage> {
                           )),
                     ],
                   ),
-
                 ],
               ),
-
               isLoading
                   ? const Center(
-                child: CircularProgressIndicator(),
-              )
+                      child: CircularProgressIndicator(),
+                    )
                   : const SizedBox.shrink(),
-
             ],
           ),
         ),

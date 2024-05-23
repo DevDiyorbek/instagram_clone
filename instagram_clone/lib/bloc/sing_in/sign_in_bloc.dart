@@ -18,10 +18,10 @@ class SignInBloc extends Bloc<SignInEvent, SignInState>{
   }
 
   Future<void> _onSignedInEvent(SignedInEvent event, Emitter<SignInState> emit) async {
-    emit(SignInInitialState());
+    emit(SignInLoadingState());
     User? firebaseUser = await AuthService.signInUser(event.context, event.email, event.password);
     if (firebaseUser == null) {
-      emit(SignInFailureState("your email or password is incorrect"));
+      emit(SignInFailureState("Your email or password is incorrect"));
     } else {
       await Prefs.saveUserId(firebaseUser.uid);
       emit(SignInSuccessState());
